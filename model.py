@@ -4,6 +4,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
 from tqdm.auto import tqdm
 import numpy as np
+import pandas as pd
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -29,7 +30,7 @@ class NeuralCD(nn.Module):
 
     def __init_weights(self, m):
         if isinstance(m, nn.Embedding) and m.weight.requires_grad:
-            nn.init.xavier_uniform_(m.weight)
+            nn.init.zeros_(m.weight)
         if isinstance(m, nn.Linear) and m.weight.requires_grad:
             nn.init.xavier_uniform_(m.weight)
             m.bias.data.fill_(0.01)
@@ -84,7 +85,7 @@ class NeuralCD(nn.Module):
         self.eval()
     
     @torch.no_grad()
-    def recommend(self, student_id: int, skill: int, top_k: int = 5, not_valid_questions: list = []):
+    def recommend(self, student_id: int, skill: int, threshold: float, top_k: int = 5, not_valid_questions: list = []):
         skill = torch.tensor(skill, dtype=torch.long).to(DEVICE)
 
         # get valid questions
@@ -104,14 +105,18 @@ class NeuralCD(nn.Module):
         student_ids = torch.tensor(len(candidates) * [student_id], dtype=torch.long).to(DEVICE)
         probs = self(student_ids, candidates).detach().cpu().numpy()
 
-        # get threshold for the skill from the user embedding
-        threshold = 1 - self.get_user_embedding(student_id)[skill]
-
         # calculate the difference between the threshold and the probabilities
         diff = np.abs(probs - threshold)
 
+        reccomendations = pd.DataFrame({
+            'question_id': candidates.detach().cpu().numpy(),
+            'difficulty': probs,
+            'diff': diff
+        })
+
         #get top k questions
-        return candidates[np.argsort(diff)][:top_k].detach().cpu().numpy()
+        reccomendations.sort_values('diff', inplace=True, ascending=False)
+        return reccomendations.head(top_k)[['question_id', 'difficulty']]
 
 class CDataset(Dataset):
     def __init__(self, logs: np.ndarray):
