@@ -6,3 +6,4 @@ Flask
 tqdm
 gunicorn
 requests
+skikit-learn
