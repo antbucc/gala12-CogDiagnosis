@@ -5,3 +5,4 @@ numpy
 Flask
 tqdm
 gunicorn
+requests
