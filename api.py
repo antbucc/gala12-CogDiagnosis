@@ -16,7 +16,7 @@ def train():
     model.fit(dataset, epochs=100, lr=2e-3, weight_decay=1e-4)
     return 'Model trained!', 200
 
-@app.route('/diagnose', methods=['POST'])
+@app.route('/diagnose', methods=['GET'])
 def diagnose():
     global model
     if model is None:
@@ -40,7 +40,7 @@ def diagnose():
 
     return jsonify(response), 200
 
-@app.route('/recommend', methods=['POST'])
+@app.route('/recommend', methods=['GET'])
 def recommend():
     global model
     if model is None:
