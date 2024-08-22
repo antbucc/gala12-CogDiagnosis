@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import requests
 from sklearn.preprocessing import OrdinalEncoder
+from exceptions import QMatrixShapeMismatchError
 
 _BASE_URL = os.environ.get(
     'API_ENDPOINT', 'https://gala24demo-api-production.up.railway.app')
@@ -52,6 +53,9 @@ class LearningData:
             'question': self.__question_encoder,
             'skill': self.__skill_encoder
         }[encoder]
+        
+        if len(ids) == 0:
+            return np.array([])
 
         return encoder.transform(np.array(ids).reshape(-1, 1)).flatten()
     
@@ -79,6 +83,12 @@ class LearningData:
         
         self.__skill_encoder.fit(
             self.__q_matrix.columns.values.reshape(-1, 1))
+        
+        if self.__q_matrix.shape != (len(questions), len(all_skills)):
+            raise QMatrixShapeMismatchError(
+                expected_shape=(len(questions), len(all_skills)),
+                actual_shape=self.__q_matrix.shape
+            )
 
     def __fetch_response_logs(self):
         logs = _get_data('students-logs')
